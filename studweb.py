@@ -14,6 +14,7 @@ pin = '' # PIN-kode til studweb
 epost = '' # E-postadressen din
 smtp = 'smtp.uio.no' # SMTP-server
 terskel = 300 # Differanse pÃ¥ filer fÃ¸r og etter ny karakter
+debug = False
 
 # Har vi noe Ã¥ sammenligne med?
 if os.path.exists('studweb.html'):
@@ -32,14 +33,20 @@ tc.submit()
 tc.follow('Se opplysninger om deg')
 tc.follow('Resultater')
 tc.save_html('studweb.html');
-tc.show()
-
-tc.follow('Logg ut')
 
 # Sammenlign
 ny_str = os.path.getsize('studweb.html')
 gml_str = os.path.getsize('studweb_old.html')
 delta = ny_str - gml_str
+
+# Debug:
+if debug:
+    tc.show()
+    print
+    print '%s - %s = %s' % (ny_str, gml_str, delta)
+    print '(Terskel: %s)' % terskel
+
+tc.follow('Logg ut')
 
 # FilstÃ¸rrelsen har endret seg tilstrekkeli, og det er ikke fÃ¸rste gang vi sjekker
 if delta > terskel and gml_str != 0:
