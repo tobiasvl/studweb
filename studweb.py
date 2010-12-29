@@ -8,13 +8,18 @@ import os
 import twill.commands as tc
 import shutil
 
-# Innstillinger
-fnr = '' # Ditt fÃ¸dselsnummer
-pin = '' # PIN-kode til studweb
-epost = '' # E-postadressen din
-smtp = 'smtp.uio.no' # SMTP-server
+# Innstillinger:
 terskel = 300 # Differanse pÃ¥ filer fÃ¸r og etter ny karakter
 debug = False
+# StudWeb-innstillinger:
+fnr = '' # Ditt fÃ¸dselsnummer
+pin = '' # PIN-kode til studweb
+# E-postvarsel:
+epost = '' # E-postadressen din
+smtp = 'smtp.uio.no' # SMTP-server
+# SMS-varsel (kun NetCom):
+sms_brukernavn = '' # Tlfnr. for minside på necom.no
+sms_passord    = '' # Passord for minside
 
 # Har vi noe Ã¥ sammenligne med?
 if os.path.exists('studweb.html'):
@@ -48,13 +53,29 @@ if debug:
 
 tc.follow('Logg ut')
 
-# FilstÃ¸rrelsen har endret seg tilstrekkeli, og det er ikke fÃ¸rste gang vi sjekker
+# FilstÃ¸rrelsen har endret seg tilstrekkelig, og det er ikke fÃ¸rste gang vi sjekker
 if delta > terskel and gml_str != 0:
-    print "Nytt resultat, sender e-post"
-    msg = email.MIMEText("Nytt resultat fra StudentWeb. Logg inn her: https://studweb.uio.no")
-    msg['Subject'] = "StudentWeb oppdatert"
-    msg['From'] = epost
-    msg['To'] = epost
-    s = smtplib.SMTP(smtp)
-    s.sendmail(msg['From'], msg['To'], msg.as_string())
-    s.quit()
+    print "Nytt resultat fra StudentWeb."
+
+    if epost:
+        print "Nytt resultat, sender e-post"
+        msg = email.MIMEText("Nytt resultat fra StudentWeb. Logg inn her: https://studweb.uio.no")
+        msg['Subject'] = "StudentWeb oppdatert"
+        msg['From'] = epost
+        msg['To'] = epost
+        s = smtplib.SMTP(smtp)
+        s.sendmail(msg['From'], msg['To'], msg.as_string())
+        s.quit()
+
+    if sms_brukernavn:
+        tc.go("https://www.netcom.no")
+        tc.follow("» Logg inn på Min side")
+        tc.fv('2', 'username', sms_brukernavn)
+        tc.fv('2', 'password', sms_passord)
+        tc.submit()
+        tc.follow("Send 25 gratis SMS")
+        tc.fv('2', 'gsmnumber', sms_brukernavn)
+        tc.submit('submitChooseContact')
+        tc.fv('2', 'message', "Nytt resultat fra StudentWeb. Logg inn her: https://studweb.uio.no")
+        tc.submit('submitSendsms')
+
