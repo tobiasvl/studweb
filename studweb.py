@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import smtplib
-import email
+from email.mime.text import MIMEText
 import sys
 import os
 import twill
@@ -40,7 +40,8 @@ try:
     tc.follow('Se opplysninger om deg')
 except te.TwillAssertionError:
     try:
-        tc.follow('Sjå opplysningar om deg')
+        # Merk: wildcard i linknavn. krøll med æøå.
+        tc.follow('Sj. opplysningar om deg')
     except te.TwillAssertionError:
         print "Feil: ukjent språg?"
         sys.exit(1)
@@ -51,20 +52,25 @@ tc.follow('Resultater')
 # show() er desverre ganske snakkesalig, så vi bytter fra stdout
 # til ett vilkårlig StringIO objekt under kall for å få mindre støy.
 twill.set_output(StringIO.StringIO())
-data = tc.show('studweb.html')
+data = tc.show()
 twill.set_output(fp=None)
 
 tc.follow('Logg ut')
 
 
-# Napper fagkode og karakterer ut av HTML, og putter i array.
+# Napper fagkode og karakterer ut av HTML, konverterer stryk
+# til bokstavkarakter, og konverterer deretter til array.
 # Eks. på resultat: [["INF1000", "B"], ["INF1040", "E"]]
 res = re.findall('<tr class="pysj\d">(.*?)</tr>', data)
-ans = []
+ans = {}
 for i in res:
-    if not re.search("Ikkje|Ikke", i):
+    if not re.search("Ikkje møtt|Ikke møtt", i):
         tmp = re.findall("<td.*?>(.*?)</td>", i)
-        ans = ans + [[tmp[1], tmp[7]]]
+        if not re.search("[A-E]", tmp[7]):
+            tmp[7] = "F"
+        if (not ans.has_key(tmp[1])) or (ans.has_key(tmp[1]) and ans[tmp[1]]== "F"):
+            ans[tmp[1]] = tmp[7]
+ans = reduce(lambda x, y: x + [[y, ans[y]]], ans, [])
 
 # Hvis første gang programmet kjører,
 # har vi ingen gammel fil å sammenligne med,
@@ -98,13 +104,15 @@ new = [x for x in ans if (lambda x: True if x not in olddata else False)(x)]
 # Vi har ny(e) karakter, send epost/sms med karakter.
 if len(new):
     print "Nytt resultat fra StudentWeb."
-    
-    karakterer = reduce(lambda x,y: x + y[0] + ": " + y[1] + ", ", new, '')[:-2]
-    print karakterer
+
+    # Lager pen tekst med fagkode og karakterer:
+    melding = "Nytt resultat fra StudentWeb: "
+    melding += reduce(lambda x,y: x + y[0] + ": " + y[1] + ", ", new, '')[:-2]
+    print melding
 
     if epost:
         print "Sender e-post"
-        msg = email.MIMEText("Nytt resultat fra StudentWeb. Logg inn her: https://studweb.uio.no\n" + karakterer)
+        msg = MIMEText(melding)
         msg['Subject'] = "StudentWeb oppdatert"
         msg['From'] = epost
         msg['To'] = epost
@@ -122,7 +130,7 @@ if len(new):
         tc.follow("Send 25 gratis SMS")
         tc.fv('2', 'gsmnumber', netcom_sms_brukernavn)
         tc.submit('submitChooseContact')
-        tc.fv('2', 'message', "Nytt resultat fra StudentWeb. Logg inn her: https://studweb.uio.no\n" + karakterer)
+        tc.fv('2', 'message', melding)
         tc.submit('submitSendsms')
 
     if telenor_sms_brukernavn:
@@ -136,7 +144,7 @@ if len(new):
         
         # Send
         tc.fv("smsSendSmsForm", "toAddress", telenor_sms_brukernavn)
-        tc.fv("smsSendSmsForm", "message", "Nytt resultat fra StudentWeb. Logg inn her: https://studweb.uio.no\n" + karakterer)
+        tc.fv("smsSendSmsForm", "message", melding)
         tc.submit()
 
         # Logout
