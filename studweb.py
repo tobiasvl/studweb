@@ -20,9 +20,12 @@ pin = '' # PIN-kode til studweb
 # E-postvarsel:
 epost = '' # E-postadressen din
 smtp = 'smtp.uio.no' # SMTP-server
-# SMS-varsel (kun NetCom):
-sms_brukernavn = '' # Tlfnr. for minside på necom.no
-sms_passord    = '' # Passord for minside
+# SMS-varsel (NetCom):
+netcom_sms_brukernavn = '' # Tlfnr. for minside på netcom.no
+netcom_sms_passord    = '' # Passord for minside
+# SMS-varsel (Telenor):
+telenor_sms_brukernavn  = '' # Tlfnr. for minside på telenormobil.no
+telenor_sms_passord     = '' # Passord
 
 # Logg inn:
 tc.go("https://studweb.uio.no/as/WebObjects/studentweb2.woa/3/wa/default?inst=UiO")
@@ -109,16 +112,33 @@ if len(new):
         s.sendmail(msg['From'], msg['To'], msg.as_string())
         s.quit()
 
-    if sms_brukernavn:
-        print "Sender SMS"
+    if netcom_sms_brukernavn:
+        print "Sender SMS via NetCom"
         tc.go("https://www.netcom.no")
         tc.follow("» Logg inn på Min side")
-        tc.fv('2', 'username', sms_brukernavn)
-        tc.fv('2', 'password', sms_passord)
+        tc.fv('2', 'username', netcom_sms_brukernavn)
+        tc.fv('2', 'password', netcom_sms_passord)
         tc.submit()
         tc.follow("Send 25 gratis SMS")
-        tc.fv('2', 'gsmnumber', sms_brukernavn)
+        tc.fv('2', 'gsmnumber', netcom_sms_brukernavn)
         tc.submit('submitChooseContact')
         tc.fv('2', 'message', "Nytt resultat fra StudentWeb. Logg inn her: https://studweb.uio.no\n" + karakterer)
         tc.submit('submitSendsms')
+
+    if telenor_sms_brukernavn:
+        print "Sender SMS via telenor"
+        
+        # Login
+        tc.go("https://telenormobil.no/norm/telenor/sms/send.do")
+        tc.fv("loginForm", "phonenumber", telenor_sms_brukernavn)
+        tc.fv("loginForm", "password", telenor_sms_passord)
+        tc.submit()
+        
+        # Send
+        tc.fv("smsSendSmsForm", "toAddress", telenor_sms_brukernavn)
+        tc.fv("smsSendSmsForm", "message", "Nytt resultat fra StudentWeb. Logg inn her: https://studweb.uio.no\n" + karakterer)
+        tc.submit()
+
+        # Logout
+        tc.follow("Logg ut")
 
