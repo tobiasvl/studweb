@@ -1,3 +1,10 @@
-Skript for å sende e-post når ny karakter publiseres i StudentWeb.
+Script that sends email and/or SMS notification (for telenor or netcom users)
+when new grades are published in StudentWeb.
 
-Basert på kode av sindrf@ifi.uio.no og runarfu@ifi.uio.no
+Based on code by sindrf@math.uio.no and runarfu@ifi.uio.no.
+
+To get started, do: './studweb.py -h'. Usage of config file is strongly
+recommended, as options passed to programs tend to show up in the process
+list of some systems.
+
+Python 2.5 or better is required.
