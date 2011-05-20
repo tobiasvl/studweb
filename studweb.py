@@ -16,43 +16,43 @@ import StringIO
 import time
 from optparse import OptionParser, OptionGroup
 
-# Dumper data til statefil
+# Dumping data to statefile
 def dump(data, statefile):
     f = open(statefile, 'w')
     pickle.dump(data, f)
     f.close()
 
 def getResults(opts):
-    # Twill pøser ut ymse rask, men det vil vi ikke ha
+    # Twill prints a lot of shit, we don't want that.
     twill.set_output(StringIO.StringIO())
 
-    # Logg inn i studweb
+    # Log into studweb
     tc.go("https://studweb.uio.no/as/WebObjects/studentweb2.woa/3/wa/default?inst=UiO")
     tc.fv("2", "fodselsnr", opts["fnr"])
     tc.fv("2", "pinkode", opts["pin"])
     tc.submit()
 
-    # Naviger til karakterer
-    # Litt slapp lokalisering for nynorskbrukere. Bør utbedres
+    # Navigating to grades. Bad localization for NN users. No loc. for EN :(
     try:
         tc.follow('Se opplysninger om deg')
     except te.TwillAssertionError:
         try:
-            # Merk: wildcard i linknavn. krøll med æøå.
+            # Note: wildcard in linkname.
+            # Problems with special NO chars (æøå).
             tc.follow('Sj. opplysningar om deg')
         except te.TwillAssertionError:
-            print "Feil: ukjent språg?"
+            print "Error: Unknown language on site?"
             sys.exit(1)
     tc.follow('Resultater')
 
-    # Lagrer HTML kode i variabel
+    # Storing HTML in var.
     data = tc.show()
 
     tc.follow('Logg ut')
 
-    # Napper fagkode og karakterer ut av HTML, konverterer stryk
-    # til bokstavkarakter, og konverterer deretter til array.
-    # Eks. på resultat: [["INF1000", "B"], ["INF1040", "E"]]
+    # Pulling coursecode and grade out of HTML, converting flunking to
+    # 'F', and putting it in an array.
+    # Ex. result: [["INF1000", "B"], ["INF1040", "E"]]
     res = re.findall('<tr class="pysj\d">(.*?)</tr>', data)
     ans = {}
     for i in res:
@@ -102,46 +102,46 @@ def sendEmail(opts, msg):
 
 def checkAndSend(opts, olddata=[]):
     ans = getResults(opts)
-    
-    # Hvis første gang programmet kjører,
-    # har vi ingen gammel fil å sammenligne med,
-    # lagrer karakterstate og returnerer.
+   
+    # If it is the first time the program runs,
+    # we don't have a statefile to compare with,
+    # saving state, and returning.
     if not os.path.exists(opts["statefile"]):
         dump(ans, opts["statefile"])
         return []
     elif olddata == []:
-        # Laster state fra forrige kjøring
+        # Loading state from last run.
         try:
             f = open(opts["statefile"])
             olddata = pickle.load(f)
             f.close()
         except IOError:
-            print "Feil: Noe er galt i statefilen"
+            print "Error: Malformed statefile"
             sys.exit(2)
 
-    # Tar vekk gamle karakterer. Hvis len(new) da er sann, så har
-    # vi fått en ny karakter siden sist kjøring.
+
+    # Remove old grades. If len(new), then we have new grades since last run.
     new = [x for x in ans if (lambda x: True if x not in olddata else False)(x)]
     
-    # Vi har ny(e) karakter, send epost/sms med karakter.
+    # We have new grades, send email/sms with the grades.
     if len(new):
         dump(ans, opts["statefile"])
-        print "Nytt resultat fra StudentWeb."
+        print "New result discovered in StudentWeb."
 
-        # Lager pen tekst med fagkode og karakterer:
-        msg = "Nytt resultat fra StudentWeb: "
+        # Make pretty text with course code and results.
+        msg = "New results from StudentWeb: "
         msg += reduce(lambda x,y: x + y[0] + ": " + y[1] + ", ", new, '')[:-2]
         
         if opts["email"]:
-            print "Sender e-post"
+            print "Sending e-mail"
             sendEmail(opts, msg)
 
         if opts["netcom_user"]:
-            print "Sender SMS via NetCom"
+            print "Sending SMS via NetCom"
             sendNetcom(opts, msg)
 
         if opts["telenor_user"]:
-            print "Sender SMS via telenor"
+            print "Sending SMS via telenor"
             sendTelenor(opts, msg)
     return ans
 
@@ -229,27 +229,6 @@ if __name__ == "__main__":
         except IOError:
             print "Error: cannot open " + options.config_file
             exit(1)
-
-        ## Penere en å dumpe alt i en dict? virker dog ikke...       
-        #try:
-        #    opt_keys = vars(options).keys()
-        #    f = open(options.config_file)
-        #    for l in f:
-        #        if l[0] != '#' and len(l[:-1]):
-        #            tmp = l[:-1].split(':')
-        #            if tmp[0] in opt_keys:
-        #                obj = eval("options." + tmp[0])
-        #                if type(obj) is str:
-        #                    obj = eval("'" + tmp[1] + "'")
-        #                else:
-        #                    obj = eval(tmp[1])
-        #            else:
-        #                print "Error: key error in config file, '" + tmp[0] + \
-        #                    "' is not a key"
-        #    f.close()
-        #except IOError:
-        #    print "Error: cannot open " + options.config_file
-        #    exit(1)
 
     if options["daemon"]:
         try:
