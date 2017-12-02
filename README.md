@@ -1,3 +1,14 @@
+**This script is archived. It does no longer work with newer versions of StudentWeb, and its maintainers are no longer students.**
+
+Feel free to fork this repo and make an updated version.
+
+Here are other, similar projects. Maybe one of them still works?
+
+* https://github.com/ronesp13/StudWebCLI
+* https://github.com/fatso83/studweb
+* https://github.com/larhauga/studweb
+* https://github.com/havarnov/studwebsnitt
+
 StudWeb
 =======
 
